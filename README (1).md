@@ -1,6 +1,6 @@
 # 🚴 Llum Intel·ligent per a Bicicleta
 
-> Llum posterior intel·ligent amb alarma antirobo, detecció de frenada automàtica i control via Bluetooth des del mòbil.
+> Llum posterior intel·ligent amb alarma antirobo que s'activa i es desactiva sola quan t'allunyes, detecció de frenada automàtica i control via Bluetooth des del mòbil.
 
 ![Estat](https://img.shields.io/badge/estat-en%20desenvolupament-orange)
 ![Plataforma](https://img.shields.io/badge/hardware-ESP32--C3-blue)
@@ -15,7 +15,7 @@ Projecte de disseny i fabricació d'una llum intel·ligent per a bicicleta que c
 **Funcionalitats:**
 - Llum vermella posterior fixa sempre encesa mentre circules
 - Detecció de frenada automàtica via acceleròmetre (MPU6050) → pampallugues
-- Sistema d'alarma antirobo: s'arma automàticament quan t'allunyes de la bici
+- Sistema d'alarma antirobo: s'activa automàticament quan t'allunyes de la bici i es desactiva al aproparte
 - Control via Bluetooth des de l'app web al mòbil
 - 1 sol botó físic per encendre/apagar
 - Notificació al mòbil quan salta l'alarma
@@ -199,16 +199,3 @@ L'app web funciona a qualsevol mòbil via Bluetooth:
 - [ ] Disseny PCB a KiCad
 - [ ] Carcassa 3D (objectiu: 50×25×12mm, ~15g)
 - [ ] Fase 2: GPS (NEO-6M) + localització remota
-
----
-
-## 👥 Autors
-
-- **Arnau Montasell** — Enginyeria de gestió de ciutats intel·ligents
-- **Cosí** — Telecomunicacions aplicada a electrònica
-
----
-
-## 📄 Llicència
-
-MIT License — lliure per usar, modificar i distribuir.
