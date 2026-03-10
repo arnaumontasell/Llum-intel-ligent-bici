@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#080810">
+<title>LlumBici</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Variables ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080810;
+    --bg2:       #0e0e1a;
+    --surface:   rgba(255,255,255,0.04);
+    --border:    rgba(255,255,255,0.07);
+    --text:      #e8e8f0;
+    --muted:     rgba(255,255,255,0.28);
+    --red:       #ff3b30;
+    --orange:    #ff9f0a;
+    --green:     #32d74b;
+    --blue:      #0a84ff;
+    --grey:      #636366;
+    --font-mono: 'DM Mono', monospace;
+    --font-disp: 'Syne', sans-serif;
+    --radius:    18px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── Fons animat ────────────────────────────────────────────── */
+  .bg-glow {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 40% at 20% 10%, rgba(255,59,48,0.07) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 80% 90%, rgba(10,132,255,0.06) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 50% 50%, rgba(50,215,75,0.03) 0%, transparent 70%);
+    transition: background 1s ease;
+  }
+  .bg-glow.alarma {
+    background:
+      radial-gradient(ellipse 80% 80% at 50% 50%, rgba(255,59,48,0.18) 0%, transparent 70%);
+    animation: alarmaPols 0.6s ease infinite alternate;
+  }
+  @keyframes alarmaPols {
+    from { opacity: 0.7; }
+    to   { opacity: 1; }
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────── */
+  .app {
+    position: relative; z-index: 1;
+    min-height: 100dvh;
+    max-width: 430px;
+    margin: 0 auto;
+    padding: 0 20px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── Header ─────────────────────────────────────────────────── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: max(env(safe-area-inset-top), 20px);
+    padding-top: 52px;
+  }
+
+  .header h1 {
+    font-family: var(--font-disp);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    line-height: 1;
+    color: var(--text);
+  }
+
+  .header .sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── RSSI ───────────────────────────────────────────────────── */
+  .rssi {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+  }
+  .rssi-bar {
+    width: 5px;
+    border-radius: 2px;
+    background: var(--border);
+    transition: background 0.3s, height 0.3s;
+  }
+  .rssi-val {
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 5px;
+    align-self: center;
+  }
+
+  /* ── Estat central ──────────────────────────────────────────── */
+  .estat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 28px;
+    padding: 36px 20px 28px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .estat-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, var(--estat-color, transparent) 0%, transparent 70%);
+    opacity: 0.08;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+
+  /* Cercle icona */
+  .icona-wrap {
+    position: relative;
+    width: 120px; height: 120px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .ring-pulse {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--estat-color, transparent);
+    animation: ringPuls 2s ease-out infinite;
+    opacity: 0;
+  }
+  .ring-pulse:nth-child(2) { animation-delay: 0.7s; }
+  @keyframes ringPuls {
+    0%   { transform: scale(0.85); opacity: 0.6; }
+    100% { transform: scale(1.6);  opacity: 0; }
+  }
+  .icona-cercle {
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, var(--estat-color, #333) 0%, transparent 80%);
+    border: 1.5px solid var(--estat-color, #333);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 40px;
+    opacity: 0.15;
+    box-shadow: 0 0 40px var(--estat-color, transparent);
+    transition: all 0.5s ease;
+  }
+  .icona-cercle.actiu { opacity: 1; }
+  .icona-cercle.alarma {
+    animation: alarmaFlash 0.5s ease infinite alternate;
+  }
+  @keyframes alarmaFlash {
+    from { opacity: 1; box-shadow: 0 0 60px var(--red); }
+    to   { opacity: 0.2; box-shadow: 0 0 10px var(--red); }
+  }
+
+  .estat-label {
+    font-family: var(--font-disp);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--estat-color, var(--muted));
+    transition: color 0.4s;
+  }
+
+  /* ── Botons ─────────────────────────────────────────────────── */
+  .botons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .fila {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .btn {
+    font-family: var(--font-disp);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 18px 12px;
+    border-radius: var(--radius);
+    border: 1.5px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+    -webkit-tap-highlight-color: transparent;
+    letter-spacing: 0.3px;
+  }
+  .btn .btn-icon { font-size: 22px; line-height: 1; }
+  .btn:active { transform: scale(0.95); }
+
+  .btn-connectar {
+    width: 100%;
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+    padding: 18px;
+    background: rgba(50,215,75,0.08);
+    border-color: rgba(50,215,75,0.25);
+    color: var(--green);
+    font-size: 15px;
+  }
+  .btn-connectar:hover { background: rgba(50,215,75,0.12); }
+  .btn-connectar:disabled {
+    opacity: 0.5; cursor: default;
+  }
+
+  .btn-alarma-on {
+    background: rgba(50,215,75,0.08);
+    border-color: rgba(50,215,75,0.2);
+    color: var(--green);
+  }
+  .btn-alarma-off {
+    background: rgba(255,159,10,0.08);
+    border-color: rgba(255,159,10,0.2);
+    color: var(--orange);
+  }
+  .btn-llum-on {
+    background: rgba(255,59,48,0.08);
+    border-color: rgba(255,59,48,0.2);
+    color: var(--red);
+  }
+  .btn-llum-off {
+    background: rgba(99,99,102,0.1);
+    border-color: rgba(99,99,102,0.2);
+    color: var(--grey);
+  }
+
+  .btn:disabled {
+    opacity: 0.2;
+    cursor: default;
+    pointer-events: none;
+  }
+  .btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    filter: brightness(1.15);
+  }
+
+  .btn-desconnectar {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-size: 12px;
+    font-family: var(--font-mono);
+    cursor: pointer;
+    padding: 8px;
+    width: 100%;
+    text-align: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* ── Spinner ────────────────────────────────────────────────── */
+  .spinner {
+    width: 18px; height: 18px;
+    border: 2px solid rgba(50,215,75,0.2);
+    border-top-color: var(--green);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Log ────────────────────────────────────────────────────── */
+  .log-section { display: flex; flex-direction: column; gap: 8px; }
+  .log-title {
+    font-size: 10px;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-left: 2px;
+  }
+  .log-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    height: 130px;
+    overflow-y: auto;
+    padding: 12px 14px;
+    scrollbar-width: none;
+  }
+  .log-box::-webkit-scrollbar { display: none; }
+  .log-item {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 5px;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+  .log-time { color: var(--muted); min-width: 52px; }
+  .log-msg  { color: rgba(255,255,255,0.55); }
+  .log-msg.green  { color: var(--green); }
+  .log-msg.red    { color: var(--red); }
+  .log-msg.orange { color: var(--orange); }
+  .log-msg.grey   { color: var(--grey); }
+  .log-empty { color: rgba(255,255,255,0.15); font-size: 11px; }
+
+  /* ── Notificació toast ──────────────────────────────────────── */
+  .toast {
+    position: fixed;
+    top: max(env(safe-area-inset-top), 16px);
+    top: 60px;
+    left: 50%; transform: translateX(-50%);
+    background: var(--red);
+    color: white;
+    font-family: var(--font-disp);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 12px 24px;
+    border-radius: 40px;
+    box-shadow: 0 8px 32px rgba(255,59,48,0.4);
+    z-index: 100;
+    white-space: nowrap;
+    animation: toastIn 0.3s ease;
+    pointer-events: none;
+  }
+  @keyframes toastIn {
+    from { transform: translateX(-50%) translateY(-12px); opacity: 0; }
+    to   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+  }
+
+  /* ── Alerta BLE no suportat ─────────────────────────────────── */
+  .alerta {
+    background: rgba(255,159,10,0.08);
+    border: 1px solid rgba(255,159,10,0.2);
+    border-radius: var(--radius);
+    padding: 16px;
+    font-size: 12px;
+    color: var(--orange);
+    line-height: 1.6;
+    text-align: center;
+  }
+  .alerta strong { display: block; margin-bottom: 6px; font-size: 13px; }
+</style>
+</head>
+<body>
+
+<div class="bg-glow" id="bgGlow"></div>
+
+<div id="toast" class="toast" style="display:none"></div>
+
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>LlumBici</h1>
+      <div class="sub" id="subHeader">No connectat</div>
+    </div>
+    <div class="rssi" id="rssiWrap" style="display:none">
+      <div class="rssi-bar" id="b1" style="height:6px"></div>
+      <div class="rssi-bar" id="b2" style="height:9px"></div>
+      <div class="rssi-bar" id="b3" style="height:12px"></div>
+      <div class="rssi-bar" id="b4" style="height:15px"></div>
+      <div class="rssi-bar" id="b5" style="height:18px"></div>
+      <span class="rssi-val" id="rssiVal">-- dBm</span>
+    </div>
+  </div>
+
+  <!-- Estat central -->
+  <div class="estat-card" id="estatCard">
+    <div class="icona-wrap">
+      <div class="ring-pulse" id="ring1"></div>
+      <div class="ring-pulse" id="ring2"></div>
+      <div class="icona-cercle" id="iconaCercle">🚴</div>
+    </div>
+    <div class="estat-label" id="estatLabel">DESCONNECTAT</div>
+  </div>
+
+  <!-- Botons -->
+  <div class="botons" id="botons">
+
+    <div id="bloqConnectar">
+      <div id="bleNoSuportat" class="alerta" style="display:none">
+        <strong>⚠️ Bluetooth no disponible</strong>
+        Web Bluetooth només funciona a Chrome o Edge.<br>
+        A iPhone cal usar <strong>Bluefy</strong> (App Store, gratuït).
+      </div>
+      <button class="btn btn-connectar" id="btnConnectar" onclick="connectar()">
+        <span>📡</span>
+        <span>Connectar via Bluetooth</span>
+      </button>
+    </div>
+
+    <div id="bloqControls" style="display:none">
+      <div class="fila" style="margin-bottom:12px">
+        <button class="btn btn-alarma-on" id="btnAlarmaOn" onclick="alarmaOn()">
+          <span class="btn-icon">🔒</span>
+          <span>Alarma On</span>
+        </button>
+        <button class="btn btn-alarma-off" id="btnAlarmaOff" onclick="alarmaOff()">
+          <span class="btn-icon">🔓</span>
+          <span>Alarma Off</span>
+        </button>
+      </div>
+      <div class="fila" style="margin-bottom:12px">
+        <button class="btn btn-llum-on" id="btnLlumOn" onclick="llumOn()">
+          <span class="btn-icon">💡</span>
+          <span>Encendre</span>
+        </button>
+        <button class="btn btn-llum-off" id="btnLlumOff" onclick="llumOff()">
+          <span class="btn-icon">🌑</span>
+          <span>Apagar</span>
+        </button>
+      </div>
+      <button class="btn-desconnectar" onclick="desconnectar()">Desconnectar</button>
+    </div>
+
+  </div>
+
+  <!-- Log -->
+  <div class="log-section">
+    <div class="log-title">Registre</div>
+    <div class="log-box" id="logBox">
+      <div class="log-empty">Esperant connexió Bluetooth...</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── UUIDs ────────────────────────────────────────────────────────
+const UUID_SERVEI  = 'bb000001-dead-beef-cafe-000000000000';
+const UUID_CONTROL = 'bb000002-dead-beef-cafe-000000000000';
+const UUID_ESTAT   = 'bb000003-dead-beef-cafe-000000000000';
+
+const CMD_LLUM_ON   = 0x01;
+const CMD_LLUM_OFF  = 0x02;
+const CMD_ARMAR     = 0x03;
+const CMD_DESARMAR  = 0x04;
+const CMD_GET_ESTAT = 0x05;
+
+// ── Estat ────────────────────────────────────────────────────────
+const ESTATS = {
+  0x00: { label: 'APAGAT',    icon: '🌑', color: '#636366', classe: '' },
+  0x01: { label: 'CIRCULANT', icon: '🚴', color: '#ff3b30', classe: 'actiu' },
+  0x02: { label: 'FRENANT',   icon: '⚠️', color: '#ff9f0a', classe: 'actiu' },
+  0x03: { label: 'ARMAT',     icon: '🔒', color: '#32d74b', classe: 'actiu' },
+  0x04: { label: 'ALARMA!',   icon: '🚨', color: '#ff3b30', classe: 'actiu alarma' },
+};
+
+let device       = null;
+let servidor     = null;
+let charControl  = null;
+let charEstat    = null;
+let estatActual  = null;
+let rssiInterval = null;
+
+// ── Comprova suport BLE ──────────────────────────────────────────
+window.addEventListener('load', () => {
+  if (!navigator.bluetooth) {
+    document.getElementById('bleNoSuportat').style.display = 'block';
+    document.getElementById('btnConnectar').style.display  = 'none';
+  }
+});
+
+// ── Connexió ─────────────────────────────────────────────────────
+async function connectar() {
+  const btn = document.getElementById('btnConnectar');
+  btn.disabled = true;
+  btn.innerHTML = '<div class="spinner"></div><span>Cercant...</span>';
+  log('Cercant LlumBici...', 'orange');
+
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [{ name: 'LlumBici' }],
+      optionalServices: [UUID_SERVEI]
+    });
+
+    device.addEventListener('gattserverdisconnected', onDesconnexio);
+    log('Dispositiu trobat, connectant...', 'orange');
+
+    servidor = await device.gatt.connect();
+    const servei = await servidor.getPrimaryService(UUID_SERVEI);
+
+    charControl = await servei.getCharacteristic(UUID_CONTROL);
+    charEstat   = await servei.getCharacteristic(UUID_ESTAT);
+
+    // Subscriu a notificacions d'estat
+    await charEstat.startNotifications();
+    charEstat.addEventListener('characteristicvaluechanged', onEstatCanviat);
+
+    // Llegeix estat actual
+    const val = await charEstat.readValue();
+    actualitzarEstat(val.getUint8(0));
+
+    mostrarConnectat(true);
+    log('✓ Connectat a LlumBici', 'green');
+
+    // Poll RSSI cada 2 segons
+    rssiInterval = setInterval(llegirRSSI, 2000);
+
+  } catch (err) {
+    log('Error: ' + err.message, 'red');
+    btn.disabled = false;
+    btn.innerHTML = '<span>📡</span><span>Connectar via Bluetooth</span>';
+  }
+}
+
+function onDesconnexio() {
+  clearInterval(rssiInterval);
+  mostrarConnectat(false);
+  actualitzarEstat(null);
+  log('Desconnectat', 'grey');
+}
+
+async function desconnectar() {
+  if (device && device.gatt.connected) {
+    device.gatt.disconnect();
+  }
+}
+
+// ── Lectura RSSI ─────────────────────────────────────────────────
+async function llegirRSSI() {
+  // Web Bluetooth no exposa RSSI directament
+  // Simulem una barra estable quan connectat
+  actualitzarRSSI(-60);
+}
+
+function actualitzarRSSI(rssi) {
+  const pct   = Math.max(0, Math.min(100, ((rssi + 100) / 60) * 100));
+  const bars  = Math.round(pct / 20);
+  const colors = ['#ff3b30','#ff9f0a','#ff9f0a','#32d74b','#32d74b'];
+  for (let i = 1; i <= 5; i++) {
+    const el = document.getElementById('b' + i);
+    el.style.background = i <= bars ? colors[i-1] : 'rgba(255,255,255,0.1)';
+  }
+  document.getElementById('rssiVal').textContent = rssi + ' dBm';
+}
+
+// ── Estat ────────────────────────────────────────────────────────
+function onEstatCanviat(e) {
+  const byte = e.target.value.getUint8(0);
+  const anterior = estatActual;
+  actualitzarEstat(byte);
+
+  // Notificació alarma
+  if (byte === 0x04 && anterior !== 0x04) {
+    mostrarToast('⚠️ Alarma activada!');
+    log('⚠️ ALARMA ACTIVADA — moviment!', 'red');
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('⚠️ LlumBici', { body: 'La teva bici s\'ha mogut!' });
+    }
+  }
+}
+
+function actualitzarEstat(byte) {
+  estatActual = byte;
+  const cfg = byte !== null ? ESTATS[byte] : { label: 'DESCONNECTAT', icon: '📡', color: '#636366', classe: '' };
+  if (!cfg) return;
+
+  // Color CSS variable
+  document.documentElement.style.setProperty('--estat-color', cfg.color);
+  document.getElementById('estatCard').style.setProperty('--estat-color', cfg.color);
+
+  // Icona
+  const cercle = document.getElementById('iconaCercle');
+  cercle.textContent  = cfg.icon;
+  cercle.className    = 'icona-cercle ' + cfg.classe;
+
+  // Label
+  document.getElementById('estatLabel').textContent  = cfg.label;
+  document.getElementById('estatLabel').style.color  = cfg.color;
+
+  // Fons alarma
+  document.getElementById('bgGlow').className = byte === 0x04 ? 'bg-glow alarma' : 'bg-glow';
+
+  // Botons habilitats/desabilitats
+  actualitzarBotons(byte);
+}
+
+function actualitzarBotons(byte) {
+  const s = {
+    alarmaOn:  document.getElementById('btnAlarmaOn'),
+    alarmaOff: document.getElementById('btnAlarmaOff'),
+    llumOn:    document.getElementById('btnLlumOn'),
+    llumOff:   document.getElementById('btnLlumOff'),
+  };
+  // Reseteja tots
+  Object.values(s).forEach(b => b.disabled = true);
+  if (byte === 0x01) { s.alarmaOn.disabled = false; s.llumOff.disabled = false; } // CIRCULANT
+  if (byte === 0x00) { s.llumOn.disabled = false; }                                // APAGAT
+  if (byte === 0x03 || byte === 0x04) { s.alarmaOff.disabled = false; }            // ARMAT / ALARMA
+  if (byte === 0x02) { s.llumOff.disabled = false; }                               // FRENANT
+}
+
+// ── Comandes ─────────────────────────────────────────────────────
+async function enviarComanda(cmd) {
+  if (!charControl) return;
+  try {
+    await charControl.writeValue(new Uint8Array([cmd]));
+  } catch (err) {
+    log('Error enviant comanda: ' + err.message, 'red');
+  }
+}
+
+function alarmaOn()  { enviarComanda(CMD_ARMAR);    log('→ Alarma ON', 'green'); }
+function alarmaOff() { enviarComanda(CMD_DESARMAR); log('→ Alarma OFF', 'orange'); }
+function llumOn()    { enviarComanda(CMD_LLUM_ON);  log('→ Llum encesa', 'red'); }
+function llumOff()   { enviarComanda(CMD_LLUM_OFF); log('→ Llum apagada', 'grey'); }
+
+// ── UI ───────────────────────────────────────────────────────────
+function mostrarConnectat(connectat) {
+  document.getElementById('bloqConnectar').style.display  = connectat ? 'none'  : 'block';
+  document.getElementById('bloqControls').style.display   = connectat ? 'block' : 'none';
+  document.getElementById('rssiWrap').style.display       = connectat ? 'flex'  : 'none';
+  document.getElementById('subHeader').textContent        = connectat
+    ? 'ESP32-C3 · LlumBici' : 'No connectat';
+
+  if (!connectat) {
+    const btn = document.getElementById('btnConnectar');
+    btn.disabled = false;
+    btn.innerHTML = '<span>📡</span><span>Connectar via Bluetooth</span>';
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────
+function mostrarToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.display = 'block';
+  setTimeout(() => { t.style.display = 'none'; }, 3000);
+}
+
+// ── Log ───────────────────────────────────────────────────────────
+function log(msg, color = '') {
+  const box = document.getElementById('logBox');
+  const empty = box.querySelector('.log-empty');
+  if (empty) empty.remove();
+
+  const now  = new Date();
+  const hora = [now.getHours(), now.getMinutes(), now.getSeconds()]
+    .map(n => String(n).padStart(2, '0')).join(':');
+
+  const item = document.createElement('div');
+  item.className = 'log-item';
+  item.innerHTML = `<span class="log-time">${hora}</span><span class="log-msg ${color}">${msg}</span>`;
+  box.appendChild(item);
+  box.scrollTop = box.scrollHeight;
+
+  // Màxim 60 entrades
+  while (box.children.length > 60) box.removeChild(box.firstChild);
+}
+
+// ── Permís notificacions ─────────────────────────────────────────
+if ('Notification' in window && Notification.permission === 'default') {
+  Notification.requestPermission();
+}
+</script>
+</body>
+</html>
